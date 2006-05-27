@@ -60,15 +60,20 @@ function securepages_settings() {
  *  Determine which version of the set to move to.
  */
 function securepages_goto($secure) {
-  $destination = $_GET['q'];
-  foreach ($_GET as $key => $value) {
-    if ($key != 'q') {
-      $query[] = "{$key}=". urlencode($value);
+  if (function_exists('url')) {
+    $destination = $_GET['q'];
+    foreach ($_GET as $key => $value) {
+      if ($key != 'q') {
+        $query[] = "{$key}=". urlencode($value);
+      }
     }
-  }
 
-  $query = is_array($query) ? implode('&', $query) : NULL;
-  $url = url($destination, $query, NULL, TRUE);
+    $query = is_array($query) ? implode('&', $query) : NULL;
+    $url = url($destination, $query, NULL, TRUE);
+  }
+  else {
+    $url = 'http://'. $_SERVER['HTTP_HOST']. $_SERVER['REQUEST_URI'];
+  }
 
   if ($secure) {
     $url = preg_replace('/^http:\/\//i', 'https://', $url);
