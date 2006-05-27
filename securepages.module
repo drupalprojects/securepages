@@ -92,14 +92,28 @@ function securepages_goto($secure) {
   $query = drupal_query_string_encode($_GET, array('q'));
   $url = securepages_get_destination($path, $query, $secure);
 
-  drupal_goto($url);
+  if (function_exists('module_invoke_all')) {
+    module_invoke_all('exit');
+  }
+  else {
+    bootstrap_invoke_all('exit');
+  }
+  header('Location: '. $url);
+  exit();
 }
 
 /**
  * securepages_get_destination()
  */
 function securepages_get_destination($path, $query, $secure) {
-  $url = url($path, $query, NULL, TRUE);
+  if (function_exists('url')) {
+    // if url() exists then use that as it will more robust.
+    $url = url($path, $query == '' ? NULL : $query, NULL, TRUE);
+  }
+  else {
+    // This should convert to the current page ok.
+    $url = 'http://'. $_SERVER['HTTP_HOST']. $_SERVER['REQUEST_URI'];
+  }
 
   if ($secure) {
     $url = preg_replace('/^http:\/\//i', 'https://', $url);
