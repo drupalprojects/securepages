@@ -16,6 +16,8 @@ function securepages_help($section) {
  * Implementation of hook_init()
  */
 function securepages_init() {
+  global $base_url;
+
   $path = $_GET['q'];
   $page_match = securepages_match($path);
 
@@ -24,6 +26,11 @@ function securepages_init() {
   }
   elseif ($page_match === FALSE && $_SERVER['HTTPS'] && variable_get('securepages_switch', FALSE)) {
     securepages_goto(FALSE);
+  }
+
+  // Correct the base_url so that everything comes from https.
+  if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on') {
+    $base_url = str_replace('http://', 'https://', $base_url);
   }
 }
 
@@ -93,7 +100,6 @@ function securepages_goto($secure) {
   $url = securepages_get_destination($path, $query, $secure);
 
   if (function_exists('module_invoke_all')) {
-    //module_invoke_all('exit');
     foreach (module_implements('exit') as $module) {
       if ($module != 'devel') {
         module_invoke($module, 'exit');
