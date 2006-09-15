@@ -95,8 +95,14 @@ function securepages_form_alter($form_id, &$form) {
  *  Determine which version of the set to move to.
  */
 function securepages_goto($secure) {
-  $path = drupal_get_path_alias($_GET['q']);
-  $query = drupal_query_string_encode($_GET, array('q'));
+  if (function_exists('drupal_get_path_alias')) {
+    $path = drupal_get_path_alias($_GET['q']);
+    $query = drupal_query_string_encode($_GET, array('q'));
+  }
+  else {
+    $path = $_REQUEST['q'];
+    $query = '';
+  }
   $url = securepages_get_destination($path, $query, $secure);
 
   if (function_exists('module_invoke_all')) {
