@@ -21,7 +21,10 @@ function securepages_init() {
   $path = $_GET['q'];
   $page_match = securepages_match($path);
 
-  if ($page_match && !$_SERVER['HTTPS']) {
+  if ($_POST) {
+    // If something has been posted to here then ignore the rules.
+  }
+  elseif ($page_match && !$_SERVER['HTTPS']) {
     securepages_goto(TRUE);
   }
   elseif ($page_match === FALSE && $_SERVER['HTTPS'] && variable_get('securepages_switch', FALSE)) {
