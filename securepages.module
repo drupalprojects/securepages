@@ -83,7 +83,8 @@ function securepages_form_alter($form_id, &$form) {
       $path = $query['q'];
     }
     else {
-      $path = ($path[0] == '/' ? substr($path, 1) : $path);
+      $base_path = base_path();
+      $path = (!strncmp($path, $base_path, strlen($base_path)) ? substr($path, strlen($base_path)) : $path);
     }
     $path = drupal_get_normal_path($path);
     $query = drupal_query_string_encode($query);
