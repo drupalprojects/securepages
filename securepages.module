@@ -69,6 +69,14 @@ function securepages_settings() {
     '#rows' => 5,
     '#description' => t("Enter one page per line as Drupal paths. The '*' character is a wildcard. Example paths are '<em>blog</em>' for the blog page and '<em>blog/*</em>' for every personal blog. '<em>&lt;front&gt;</em>' is the front page."),
   );
+  $form['securepages_ignore'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Ignore pages'),
+    '#default_value' => variable_get('securepages_ignore', "*/autocomplete/*"),
+    '#cols' => 40,
+    '#rows' => 5,
+    '#description' => t("The pages listed here will be ignored and be either returned in http or https. Enter one page per line as Drupal paths. The '*' character is a wildcard. Example paths are '<em>blog</em>' for the blog page and '<em>blog/*</em>' for every personal blog. '<em>&lt;front&gt;</em>' is the front page."),
+  );
   return system_settings_form($form);
 }
 
@@ -201,7 +209,19 @@ function securepages_get_destination($path, $query, $secure) {
 function securepages_match($path) {
   $secure = variable_get('securepages_secure', 1);
   $pages = variable_get('securepages_pages', "node/add*\nnode/*/edit\nuser/*\nadmin*");
+  $ignore = variable_get('securepages_ignore', "*/autocomplete/*");
 
+  if ($ignore) {
+    $regexp = '/^('. preg_replace(array('/(\r\n?|\n)/', '/\\\\\*/', '/(^|\|)\\\\<front\\\\>($|\|)/'), array('|', '.*', '\1'. preg_quote(variable_get('site_frontpage', 'node'), '/') .'\2'), preg_quote($ignore, '/')) .')$/';
+    if (preg_match($regexp, $path)) {
+      if ($_SERVER['HTTPS'] == 'on') {
+        return TRUE;
+      }
+      else {
+        return FALSE;
+      }
+    }
+  }
   if ($pages) {
     $regexp = '/^('. preg_replace(array('/(\r\n?|\n)/', '/\\\\\*/', '/(^|\|)\\\\<front\\\\>($|\|)/'), array('|', '.*', '\1'. preg_quote(variable_get('site_frontpage', 'node'), '/') .'\2'), preg_quote($pages, '/')) .')$/';
     return !($secure xor preg_match($regexp, $path));

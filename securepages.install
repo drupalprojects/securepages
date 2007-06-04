@@ -8,4 +8,5 @@ function securepages_uninstall() {
   variable_del('securepages_switch');
   variable_del('securepages_secure');
   variable_del('securepages_pages');
+  variable_del('securepages_ignore');
 }
