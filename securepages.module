@@ -29,7 +29,7 @@ function securepages_init() {
   elseif ($page_match && !$_SERVER['HTTPS']) {
     securepages_goto(TRUE);
   }
-  elseif ($page_match === FALSE && $_SERVER['HTTPS'] && variable_get('securepages_switch', FALSE)) {
+  elseif ($page_match === 0 && $_SERVER['HTTPS'] && variable_get('securepages_switch', FALSE)) {
     securepages_goto(FALSE);
   }
 
@@ -230,24 +230,35 @@ function securepages_get_destination($path, $query, $secure) {
  *  NULL - do not change page.
  */
 function securepages_match($path) {
+  /* Check to see if the current menu item has a preference and ignore the
+   * secure pages settings
+   */
+  $item = menu_get_item(menu_get_active_item());
+  if (isset($item['secure'])) {
+    return $item['secure'];
+  }
+
+  /**
+   * Check to see if the page matches the current settings
+   */
   $secure = variable_get('securepages_secure', 1);
   $pages = variable_get('securepages_pages', "node/add*\nnode/*/edit\nuser/*\nadmin*");
-  $ignore = variable_get('securepages_ignore', "*/autocomplete/*");
+  $ignore = variable_get('securepages_ignore', "*/autocomplete/*\n*/ajax/*");
 
   if ($ignore) {
     $regexp = '/^('. preg_replace(array('/(\r\n?|\n)/', '/\\\\\*/', '/(^|\|)\\\\<front\\\\>($|\|)/'), array('|', '.*', '\1'. preg_quote(variable_get('site_frontpage', 'node'), '/') .'\2'), preg_quote($ignore, '/')) .')$/';
     if (preg_match($regexp, $path)) {
       if ($_SERVER['HTTPS'] == 'on') {
-        return TRUE;
+        return 1;
       }
       else {
-        return FALSE;
+        return 0;
       }
     }
   }
   if ($pages) {
     $regexp = '/^('. preg_replace(array('/(\r\n?|\n)/', '/\\\\\*/', '/(^|\|)\\\\<front\\\\>($|\|)/'), array('|', '.*', '\1'. preg_quote(variable_get('site_frontpage', 'node'), '/') .'\2'), preg_quote($pages, '/')) .')$/';
-    return !($secure xor preg_match($regexp, $path));
+    return !($secure xor preg_match($regexp, $path)) ? 1 : 0;
   }
   else {
     return;
