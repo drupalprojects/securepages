@@ -203,7 +203,7 @@ function securepages_get_destination($path, $query, $secure) {
   }
   else {
     // This should convert to the current page ok.
-    $url = 'http://'. $_SERVER['HTTP_HOST']. $_SERVER['REQUEST_URI'];
+    $url = 'http://'. $_SERVER['HTTP_HOST'] . request_uri();
   }
 
   if ($secure) {
