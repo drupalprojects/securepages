@@ -8,6 +8,19 @@ function securepages_init() {
   global $base_url;
 
   $path = $_GET['q'];
+  if ($path == 'admin/settings/securepages/test') {
+    if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS']) {
+      header('HTTP/1.1 200 OK');
+    }
+    else {
+      header('HTTP/1.1 404 Not Found');
+    }
+    exit();
+  }
+  if (!variable_get('securepages_enable', 0) || basename($_SERVER['PHP_SELF']) != 'index.php') {
+    return;
+  }
+
   $page_match = securepages_match($path);
 
   if ($_POST) {
@@ -49,6 +62,16 @@ function securepages_menu($may_cache) {
  * Implementation of hook_settings()
  */
 function securepages_settings() {
+  $form = array();
+
+  $form['securepages_enable'] = array(
+    '#type' => 'radios',
+    '#title' => t('Enable Secure Pages'),
+    '#default_value' => variable_get('securepages_enable', 0),
+    '#options' => array(t('Disabled'), t('Enabled')),
+    '#disabled' => !securepages_test(),
+    '#description' => t('To start using secure pages this setting must be enabled. This setting will only be able to changed when the web server has been configured for SSL'),
+  );
   $form['securepages_switch'] = array(
     '#type' => 'checkbox',
     '#title' => t('Switch back to http pages when there are no matches'),
@@ -230,3 +253,15 @@ function securepages_match($path) {
     return;
   }
 }
+
+/**
+ * Secure Pages SSL Test
+ */
+function securepages_test() {
+  $url = 'https://'. preg_replace(';^http[s]?://;s', '', url('admin/settings/securepages/test', NULL, NULL, TRUE));
+
+  $response = drupal_http_request($url);
+
+  return $response->code == 200 ? TRUE : FALSE;
+}
+
