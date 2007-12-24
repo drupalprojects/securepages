@@ -107,6 +107,10 @@ function securepages_settings() {
  * Implementation of hook_form_alter()
  */
 function securepages_form_alter($form_id, &$form) {
+  if (!variable_get('securepages_enable', 0)) {
+    return;
+  }
+
   if ($form['#action']) {
     extract(parse_url($form['#action']));
     parse_str($query, $query);
@@ -123,7 +127,7 @@ function securepages_form_alter($form_id, &$form) {
     if ($page_match && !$_SERVER['HTTPS']) {
       $form['#action'] = securepages_get_destination($path, $query, TRUE);
     }
-    elseif ($page_match === FALSE && $_SERVER['HTTPS'] && variable_get('securepages_switch', FALSE)) {
+    elseif ($page_match === 0 && $_SERVER['HTTPS'] && variable_get('securepages_switch', FALSE)) {
       $form['#action'] = securepages_get_destination($path, $query, FALSE);
     }
   }
@@ -133,13 +137,16 @@ function securepages_form_alter($form_id, &$form) {
  * Implementation of hook_link_alter()
  */
 function securepages_link_alter(&$node, &$links) {
+  if (!variable_get('securepages_enable', 0)) {
+    return;
+  }
   foreach ($links as $module => $link) {
     if ($link['href']) {
       $page_match = securepages_match($link['href']);
       if ($page_match && !$_SERVER['HTTPS']) {
         $links[$module]['href'] = securepages_get_destination($link['href'], NULL, TRUE);
       }
-      elseif ($page_match === FALSE && $_SERVER['HTTPS'] && variable_get('securepages_switch', FALSE)) {
+      elseif ($page_match === 0 && $_SERVER['HTTPS'] && variable_get('securepages_switch', FALSE)) {
         $links[$module]['href'] = securepages_get_destination($link['href'], NULL, FALSE);
       }
     }
@@ -230,12 +237,15 @@ function securepages_get_destination($path, $query, $secure) {
  *  NULL - do not change page.
  */
 function securepages_match($path) {
-  /* Check to see if the current menu item has a preference and ignore the
+  /** 
+   * Check to see if the current menu item has a preference and ignore the
    * secure pages settings
    */
-  $item = menu_get_item(menu_get_active_item());
-  if (isset($item['secure'])) {
-    return $item['secure'];
+  if (function_exists('menu_get_item')) {
+    $item = menu_get_item(menu_get_active_item());
+    if (isset($item['secure'])) {
+      return $item['secure'];
+    }
   }
 
   /**
