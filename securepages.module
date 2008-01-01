@@ -70,7 +70,7 @@ function securepages_settings() {
     '#default_value' => variable_get('securepages_enable', 0),
     '#options' => array(t('Disabled'), t('Enabled')),
     '#disabled' => !securepages_test(),
-    '#description' => t('To start using secure pages this setting must be enabled. This setting will only be able to changed when the web server has been configured for SSL'),
+    '#description' => t('To start using secure pages this setting must be enabled. This setting will only be able to changed when the web server has been configured for SSL.<br />If this test has failed then go <a href="!url">here</a>', array('!url' => preg_replace(';^http://;i', 'https://', url($_GET['q'], NULL, NULL, TRUE)))),
   );
   $form['securepages_switch'] = array(
     '#type' => 'checkbox',
@@ -279,6 +279,10 @@ function securepages_match($path) {
  * Secure Pages SSL Test
  */
 function securepages_test() {
+  // If we are in an SSL page then assume that SSL is configured correctly.
+  if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on') {
+    return TRUE;
+  }
   $url = 'https://'. preg_replace(';^http[s]?://;s', '', url('admin/settings/securepages/test', NULL, NULL, TRUE));
 
   $response = drupal_http_request($url);
