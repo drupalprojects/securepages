@@ -9,7 +9,7 @@ function securepages_init() {
 
   $path = $_GET['q'];
   if ($path == 'admin/settings/securepages/test') {
-    if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS']) {
+    if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on') {
       header('HTTP/1.1 200 OK');
     }
     else {
@@ -26,10 +26,10 @@ function securepages_init() {
   if ($_POST) {
     // If something has been posted to here then ignore the rules.
   }
-  elseif ($page_match && !$_SERVER['HTTPS']) {
+  elseif ($page_match && $_SERVER['HTTPS'] != 'on') {
     securepages_goto(TRUE);
   }
-  elseif ($page_match === 0 && $_SERVER['HTTPS'] && variable_get('securepages_switch', FALSE)) {
+  elseif ($page_match === 0 && $_SERVER['HTTPS'] == 'on' && variable_get('securepages_switch', FALSE)) {
     securepages_goto(FALSE);
   }
 
@@ -124,10 +124,10 @@ function securepages_form_alter($form_id, &$form) {
     $path = drupal_get_normal_path($path);
     $query = drupal_query_string_encode($query);
     $page_match = securepages_match($path);
-    if ($page_match && !$_SERVER['HTTPS']) {
+    if ($page_match && $_SERVER['HTTPS'] != 'on') {
       $form['#action'] = securepages_get_destination($path, $query, TRUE);
     }
-    elseif ($page_match === 0 && $_SERVER['HTTPS'] && variable_get('securepages_switch', FALSE)) {
+    elseif ($page_match === 0 && $_SERVER['HTTPS'] == 'on' && variable_get('securepages_switch', FALSE)) {
       $form['#action'] = securepages_get_destination($path, $query, FALSE);
     }
   }
@@ -143,10 +143,10 @@ function securepages_link_alter(&$node, &$links) {
   foreach ($links as $module => $link) {
     if ($link['href']) {
       $page_match = securepages_match($link['href']);
-      if ($page_match && !$_SERVER['HTTPS']) {
+      if ($page_match && $_SERVER['HTTPS'] != 'on') {
         $links[$module]['href'] = securepages_get_destination($link['href'], NULL, TRUE);
       }
-      elseif ($page_match === 0 && $_SERVER['HTTPS'] && variable_get('securepages_switch', FALSE)) {
+      elseif ($page_match === 0 && $_SERVER['HTTPS'] == 'on' && variable_get('securepages_switch', FALSE)) {
         $links[$module]['href'] = securepages_get_destination($link['href'], NULL, FALSE);
       }
     }
