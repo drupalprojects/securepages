@@ -35,7 +35,7 @@ function securepages_init() {
 
   // Correct the base_url so that everything comes from https.
   if (securepages_is_secure()) {
-    $base_url = str_replace('http://', 'https://', $base_url);
+    $base_url = securepages_baseurl();
   }
 }
 
@@ -78,6 +78,19 @@ function securepages_settings() {
     '#return_value' => TRUE,
     '#default_value' => variable_get('securepages_switch', FALSE),
   );
+
+  $form['securepages_basepath'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Non-secure Base URL'),
+    '#default_value' => variable_get('securepages_basepath', ''),
+  );
+
+  $form['securepages_basepath_ssl'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Secure Base URL'),
+    '#default_value' => variable_get('securepages_basepath_ssl', ''),
+  );
+
   $form['securepages_secure'] = array(
     '#type' => 'radios',
     '#title' => t('Pages which will be be secure'),
@@ -125,10 +138,10 @@ function securepages_form_alter($form_id, &$form) {
     $query = drupal_query_string_encode($query);
     $page_match = securepages_match($path);
     if ($page_match && !securepages_is_secure()) {
-      $form['#action'] = securepages_get_destination($path, $query, TRUE);
+      $form['#action'] = securepages_url($path, $query, NULL, TRUE);
     }
     elseif ($page_match === 0 && securepages_is_secure() && variable_get('securepages_switch', FALSE)) {
-      $form['#action'] = securepages_get_destination($path, $query, FALSE);
+      $form['#action'] = securepages_url($path, $query, NULL, FALSE);
     }
   }
 }
@@ -144,10 +157,10 @@ function securepages_link_alter(&$node, &$links) {
     if ($link['href']) {
       $page_match = securepages_match($link['href']);
       if ($page_match && !securepages_is_secure()) {
-        $links[$module]['href'] = securepages_get_destination($link['href'], NULL, TRUE);
+        $links[$module]['href'] = securepages_url($link['href'], NULL, NULL, TRUE);
       }
       elseif ($page_match === 0 && securepages_is_secure() && variable_get('securepages_switch', FALSE)) {
-        $links[$module]['href'] = securepages_get_destination($link['href'], NULL, FALSE);
+        $links[$module]['href'] = securepages_url($link['href'], NULL, NULL, FALSE);
       }
     }
   }
@@ -162,15 +175,9 @@ function securepages_link_alter(&$node, &$links) {
  *  Determine which version of the set to move to.
  */
 function securepages_goto($secure) {
-  if (function_exists('drupal_get_path_alias')) {
-    $path = drupal_get_path_alias($_GET['q']);
-    $query = drupal_query_string_encode($_GET, array('q'));
-  }
-  else {
-    $path = $_REQUEST['q'];
-    $query = '';
-  }
-  $url = securepages_get_destination($path, $query, $secure);
+  $path = !empty($_REQUEST['q']) ? $_REQUEST['q'] : '';
+  $query = count($_GET) > 1 ? securepages_get_query($_GET) : NULL;
+  $url = securepages_url($path, $query, NULL, $secure);
 
   if (function_exists('module_invoke_all')) {
     foreach (module_implements('exit') as $module) {
@@ -184,43 +191,6 @@ function securepages_goto($secure) {
   }
   header('Location: '. $url);
   exit();
-}
-
-/**
- * securepages_get_destination()
- *
- * Build the full secure/insecure destination for the past url
- *
- * @param $path
- *  path of the page that we need to get to.
- *
- * @param $query
- *  The querystring of the url that the web site is going to be past to.
- *
- * @param $secure
- *  determines what type of page to return.
- *
- * @return
- *  valid url which is secure or insecure depending on the $secure flag.
- */
-function securepages_get_destination($path, $query, $secure) {
-  if (function_exists('url')) {
-    // if url() exists then use that as it will more robust.
-    $url = url($path, $query == '' ? NULL : $query, NULL, TRUE);
-  }
-  else {
-    // This should convert to the current page ok.
-    $url = 'http://'. $_SERVER['HTTP_HOST'] . request_uri();
-  }
-
-  if ($secure) {
-    $url = preg_replace('/^http:\/\//i', 'https://', $url);
-  }
-  else {
-    $url = preg_replace('/^https:\/\//i', 'http://', $url);
-  }
-
-  return $url;
 }
 
 /**
@@ -290,4 +260,118 @@ function securepages_test() {
  */
 function securepages_is_secure() {
   return (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on') ? TRUE : FALSE;
+}
+
+/**
+ * Generate a URL from a Drupal menu path. Will also pass-through existing URLs.
+ * 
+ * When creating links in modules, consider whether l() could be a better alternative than url().
+ * 
+ */
+function securepages_url($path = NULL, $query = NULL, $fragment = NULL, $secure = FALSE) {
+  if (isset($fragment)) {
+    $fragment = '#'. $fragment;
+  }
+
+  // Return an external link if $path contains an allowed absolute URL.
+  // Only call the slow filter_xss_bad_protocol if $path contains a ':' before any / ? or #.
+  $colonpos = strpos($path, ':');
+  if ($colonpos !== FALSE && !preg_match('![/?#]!', substr($path, 0, $colonpos)) && filter_xss_bad_protocol($path, FALSE) == check_plain($path)) {
+    // Split off the fragment
+    if (strpos($path, '#') !== FALSE) {
+      list($path, $old_fragment) = explode('#', $path, 2);
+      if (isset($old_fragment) && !isset($fragment)) {
+        $fragment = '#'. $old_fragment;
+      }
+    }
+    // Append the query
+    if (isset($query)) {
+      $path .= (strpos($path, '?') !== FALSE ? '&' : '?') . $query;
+    }
+    // Reassemble
+    return $path . $fragment;
+  }
+
+  global $base_url;
+  static $script;
+  static $clean_url;
+
+  if (!isset($script)) {
+    // On some web servers, such as IIS, we can't omit "index.php". So, we
+    // generate "index.php?q=foo" instead of "?q=foo" on anything that is not
+    // Apache.
+    $script = (strpos($_SERVER['SERVER_SOFTWARE'], 'Apache') === FALSE) ? 'index.php' : '';
+  }
+
+  // Cache the clean_url variable to improve performance.
+  if (!isset($clean_url)) {
+    $clean_url = (bool)variable_get('clean_url', '0');
+  }
+
+  $base = securepages_baseurl($secure) .'/';
+
+  // The special path '<front>' links to the default front page.
+  if (!empty($path) && $path != '<front>') {
+    $path = drupal_get_path_alias($path);
+    $path = drupal_urlencode($path);
+    if (!$clean_url) {
+      if (!empty($query)) {
+        return $base . $script .'?q='. $path .'&'. $query . $fragment;
+      }
+      else {
+        return $base . $script .'?q='. $path . $fragment;
+      }
+    }
+    else {
+      if (!empty($query)) {
+        return $base . $path .'?'. $query . $fragment;
+      }
+      else {
+        return $base . $path . $fragment;
+      }
+    }
+  }
+  else {
+    if (!empty($query)) {
+      return $base . $script .'?'. $query . $fragment;
+    }
+    else {
+      return $base . $fragment;
+    }
+  }
+}
+
+/**
+ * Return the secure base path
+ */
+function securepages_baseurl($secure = TRUE) {
+  global $base_url;
+
+  if ($secure) {
+    $url = variable_get('securepages_basepath_ssl', NULL);
+  }
+  else {
+    $url = variable_get('securepages_basepath', NULL);
+  }
+
+  if (!empty($url)) {
+    return $url;
+  }
+  
+  // No url has been set, so convert the base_url from 1 to the other
+  return preg_replace('/http[s]?:\/\//i', ($secure ? 'https://' : 'http://'), $base_url, 1);
+}
+
+/**
+ * Return a querystring without the q paramter
+ */
+function securepages_get_query($query) {
+  unset($query['q']);
+  $q = array();
+
+  foreach ($query as $key => $value) {
+    $q[] = drupal_urlencode($key) .'='. drupal_urlencode($value);
+  }
+
+  return implode('&', $q);
 }
