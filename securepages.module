@@ -7,7 +7,7 @@
 function securepages_init() {
   global $base_url;
 
-  $path = $_GET['q'];
+  $path = isset($_GET['q']) ? $_GET['q'] : '';
   if ($path == 'admin/settings/securepages/test') {
     if (securepages_is_secure()) {
       header('HTTP/1.1 200 OK');
