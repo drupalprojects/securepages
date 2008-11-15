@@ -5,7 +5,7 @@
  * Implementation of hook_enable()
  */
 function securepages_enable() {
-  drupal_set_message(t('Secure pages needs to be enabled on !setting', array('!settings' => l(t('admin/settings/securepages'), 'admin/settings/securepages'))));
+  drupal_set_message(t('Secure pages needs to be enabled on !settings', array('!settings' => l(t('admin/settings/securepages'), 'admin/settings/securepages'))));
 }
 
 /**
