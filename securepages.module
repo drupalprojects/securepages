@@ -124,7 +124,7 @@ function securepages_form_alter($form_id, &$form) {
     return;
   }
 
-  if ($form['#action']) {
+  if (isset($form['#action']) && securepages_can_alter_url($form['#action'])) {
     extract(parse_url($form['#action']));
     parse_str($query, $query);
     if (isset($query['q'])) {
@@ -154,7 +154,7 @@ function securepages_link_alter(&$node, &$links) {
     return;
   }
   foreach ($links as $module => $link) {
-    if ($link['href']) {
+    if ($link['href'] && securepages_can_alter_url($link['href'])) {
       $page_match = securepages_match($link['href']);
       if ($page_match && !securepages_is_secure()) {
         $links[$module]['href'] = securepages_url($link['href'], NULL, NULL, TRUE);
@@ -374,4 +374,43 @@ function securepages_get_query($query) {
   }
 
   return implode('&', $q);
+}
+
+/**
+ * Copy of Drupals so we can redirect correctly
+ */
+function securepages_urlencode($text) {
+  if (variable_get('clean_url', '0')) {
+    return str_replace(array('%2F', '%26', '%23', '//'),
+                       array('/', '%2526', '%2523', '/%252F'),
+                       urlencode($text));
+  }
+  else {
+    return str_replace('%2F', '/', urlencode($text));
+  }
+}
+
+/**
+ * Check the url and make sure that it is a url that you can alter this url.
+ */
+function securepages_can_alter_url($url) {
+  global $base_path;
+  
+  extract(parse_url($url));
+  
+  // If there is no scheme then it is a relative url and can be altered
+  if (!isset($scheme) && $base_path == '/') {
+    return TRUE;
+  }
+  
+  // If the host names are not the same then don't allow altering of the path.
+  if (strtolower($host) != strtolower($_SERVER['HTTP_HOST'])) {
+    return FALSE;
+  }
+  
+  if (strlen($base_path) > 1 && substr($base_url, -1) != substr($path, 1, strlen($base_path))) {
+    return FALSE;
+  }
+  
+  return TRUE;
 }
