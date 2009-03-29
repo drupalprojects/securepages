@@ -311,7 +311,7 @@ function securepages_url($path = NULL, $query = NULL, $fragment = NULL, $secure 
   $base = securepages_baseurl($secure) .'/';
 
   // The special path '<front>' links to the default front page.
-  if (!empty($path) && $path != '<front>') {
+  if (!empty($path) && $path != '<front>' && function_exists('drupal_get_path_alias')) {
     $path = drupal_get_path_alias($path);
     $path = drupal_urlencode($path);
     if (!$clean_url) {
