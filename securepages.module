@@ -124,7 +124,7 @@ function securepages_link_alter(&$links, $node, $comment = NULL) {
     return;
   }
   foreach ($links as $module => $link) {
-    if ($link['href'] && securepages_can_alter_url($link['href'])) {
+    if (isset($link['href']) && $link['href'] && securepages_can_alter_url($link['href'])) {
       $page_match = securepages_match($link['href']);
       if ($page_match && !securepages_is_secure()) {
         $links[$module]['href'] = securepages_url($link['href'], array('secure' => TRUE));
