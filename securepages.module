@@ -259,7 +259,7 @@ function securepages_is_secure() {
       return TRUE;
     }
     elseif (isset($_SERVER[$key]) && $_SERVER[$key] == $value) {
-      return $TRUE;
+      return TRUE;
     }
   }
   return FALSE;
