@@ -15,9 +15,11 @@ class SecurePagesTestCase extends DrupalWebTestCase {
   }
 
   function setUp() {
-    parent::setUp('securepages', 'comment');
+    parent::setUp('securepages', 'comment', 'path');
     variable_set('https', TRUE);
     variable_set('securepages_enable', TRUE);
+    variable_set('comment_form_location_story', COMMENT_FORM_BELOW);
+    variable_set('comment_preview_story', COMMENT_PREVIEW_OPTIONAL);
   }
 
   /**
@@ -45,7 +47,7 @@ class SecurePagesTestCase extends DrupalWebTestCase {
     $this->web_user = $this->drupalCreateUser(array('administer site configuration', 'access administration pages'));
     $this->loginHTTPS($this->web_user);
     $edit = array('securepages_enable' => 1);
-    $this->drupalPost('admin/structure/securepages', $edit, t('Save configuration'), array('https' => TRUE));
+    $this->drupalPost($this->_toHTTPS(url('admin/build/securepages', array('absolute' => TRUE))), $edit, t('Save configuration'));
     $this->assertRaw(t('The configuration options have been saved.'));
     $this->drupalLogout();
   }
@@ -66,36 +68,36 @@ class SecurePagesTestCase extends DrupalWebTestCase {
    */
   function _testAnonymous() {
     // Visit the home page and /node with plain HTTP.
-    $this->drupalGet('', array('https' => FALSE));
+    $this->drupalGet('');
     $this->assertResponse(200);
-    $this->assertUrl(url('', array('https' => FALSE, 'absolute' => TRUE)));
-    $this->drupalGet('node', array('https' => FALSE));
+    $this->assertUrl(url('', array('absolute' => TRUE)));
+    $this->drupalGet('node');
     $this->assertResponse(200);
-    $this->assertUrl(url('node', array('https' => FALSE, 'absolute' => TRUE)));
+    $this->assertUrl(url('node', array('absolute' => TRUE)));
 
     // Visit the login page and confirm that browser is redirected to HTTPS.
-    $this->drupalGet('user', array('https' => FALSE));
+    $this->drupalGet('user');
     $this->assertResponse(200);
-    $this->assertUrl(url('user', array('https' => TRUE, 'absolute' => TRUE)));
+    $this->assertUrl($this->_toHTTPS(url('user', array('absolute' => TRUE))));
 
     // Visit the home page and /node with HTTPS and confirm that no redirection happens.
-    $this->drupalGet('', array('https' => TRUE));
+    $this->drupalGet($this->_toHTTPS(url('', array('absolute' => TRUE))));
     $this->assertResponse(200);
-    $this->assertUrl(url('', array('https' => TRUE, 'absolute' => TRUE)));
-    $this->drupalGet('node', array('https' => TRUE));
+    $this->assertUrl($this->_toHTTPS(url('', array('absolute' => TRUE))));
+    $this->drupalGet($this->_toHTTPS(url('node', array('absolute' => TRUE))));
     $this->assertResponse(200);
-    $this->assertUrl(url('node', array('https' => TRUE, 'absolute' => TRUE)));
+    $this->assertUrl($this->_toHTTPS(url('node', array('absolute' => TRUE))));
 
     // Enable "Switch back to http pages when there are no matches".
     variable_set('securepages_switch', TRUE);
 
     // Visit the home page and /node with HTTPS and confirm that switch-back happens.
-    $this->drupalGet('', array('https' => TRUE));
+    $this->drupalGet($this->_toHTTPS(url('', array('absolute' => TRUE))));
     $this->assertResponse(200);
-    $this->assertUrl(url('', array('https' => FALSE, 'absolute' => TRUE)));
-    $this->drupalGet('node', array('https' => TRUE));
+    $this->assertUrl(url('', array('absolute' => TRUE)));
+    $this->drupalGet($this->_toHTTPS(url('node', array('absolute' => TRUE))));
     $this->assertResponse(200);
-    $this->assertUrl(url('node', array('https' => FALSE, 'absolute' => TRUE)));
+    $this->assertUrl($this->_toHTTP(url('node', array('absolute' => TRUE))));
 
     // Clean up
     variable_del('securepages_pages');
@@ -112,8 +114,8 @@ class SecurePagesTestCase extends DrupalWebTestCase {
     // Enable anonymous user comments.
     db_query("UPDATE {permission} SET perm = '%s' WHERE rid = %d", 'access comments, access content, post comments, post comments without approval', DRUPAL_ANONYMOUS_RID);
 
-    $this->web_user = $this->drupalCreateUser(array('access comments', 'post comments', 'skip comment approval'));
-    $node = $this->drupalCreateNode(array('type' => 'article', 'promote' => 1));
+    $this->web_user = $this->drupalCreateUser(array('access comments', 'post comments', 'post comments without approval'));
+    $node = $this->drupalCreateNode(array('type' => 'story', 'promote' => 1));
 
     foreach (array('anonymous', 'authenticated') as $mode) {
       if ($mode == 'authenticated') {
@@ -122,18 +124,20 @@ class SecurePagesTestCase extends DrupalWebTestCase {
 
       // Test plain HTTP posting to HTTPS.
       variable_set('securepages_pages', "comment/reply/*\nuser*");
-      $this->drupalGet('node/' . $node->nid, array('https' => FALSE));
-      $this->assertFieldByXPath('//form[@class="comment-form" and starts-with(@action, "https:")]', NULL, "The $mode comment form action is https.");
-      $this->drupalPost(NULL, array('comment_body[und][0][value]' => 'test comment'), t('Save'));
-      $this->assertRaw(t('Your comment has been posted.'));
+      $this->drupalGet('node/' . $node->nid);
+      $this->assertFieldByXPath('//form[@id="comment-form" and starts-with(@action, "https:")]', NULL, "The $mode comment form action is https.");
+      $comment_body = $this->randomName(8);
+      $this->drupalPost(NULL, array('comment' => $comment_body), t('Save'));
+      $this->assertRaw($comment_body);
 
       // Test HTTPS posting to plain HTTP.
       variable_set('securepages_pages', "node/*\nuser*");
-      $this->drupalGet('node/' . $node->nid, array('https' => TRUE));
-      $this->assertUrl(url('node/' . $node->nid, array('https' => TRUE, 'absolute' => TRUE)));
-      $this->assertFieldByXPath('//form[@class="comment-form" and starts-with(@action, "http:")]', NULL, "The $mode comment form action is http.");
-      $this->drupalPost(NULL, array('comment_body[und][0][value]' => 'test'), t('Save'));
-      $this->assertRaw(t('Your comment has been posted.'));
+      $this->drupalGet($this->_toHTTPS(url('node/' . $node->nid), array('absolute' => TRUE)));
+      $this->assertUrl($this->_toHTTPS(url('node/' . $node->nid, array('absolute' => TRUE))));
+      $this->assertFieldByXPath('//form[@id="comment-form" and starts-with(@action, "http:")]', NULL, "The $mode comment form action is http.");
+      $comment_body = $this->randomName(8);
+      $this->drupalPost(NULL, array('comment' => $comment_body), t('Save'));
+      $this->assertRaw($comment_body);
     }
     $this->drupalLogout();
 
@@ -156,15 +160,15 @@ class SecurePagesTestCase extends DrupalWebTestCase {
   function _testCachedResponse() {
     // Enable the page cache and fetch the login page.
     variable_set('cache', TRUE);
-    $url = url('user', array('absolute' => TRUE, 'https' => FALSE));
+    $url = url('user/login', array('absolute' => TRUE));
     $this->drupalGet($url);
 
     // Short-circuit redirects within the simpletest browser.
     variable_set('simpletest_maximum_redirects', 0);
     $this->drupalGet($url);
     $this->assertResponse(302);
-    $this->assertEqual($this->drupalGetHeader('Location'), url('user', array('https' => TRUE, 'absolute' => TRUE)));
-    $this->assertEqual($this->drupalGetHeader('X-Drupal-Cache'), 'HIT', 'Page was cached.');
+    $this->assertEqual($this->drupalGetHeader('Location'), $this->_toHTTPS(url('user/login', array('absolute' => TRUE))));
+    // $this->assertEqual($this->drupalGetHeader('X-Securepages-Cache'), 'HIT', 'Page was cached.'); @FIXME
 
     // Clean up
     variable_del('cache');
@@ -186,15 +190,15 @@ class SecurePagesTestCase extends DrupalWebTestCase {
 
     // Create alias.
     $edit = array();
-    $edit['source'] = 'node/' . $node->nid;
-    $edit['alias'] = $this->randomName(8);
-    $this->drupalPost('admin/config/search/path/add', $edit, t('Save'));
+    $edit['src'] = 'node/' . $node->nid;
+    $edit['dst'] = $this->randomName(8);
+    $this->drupalPost('admin/build/path/add', $edit, t('Create new alias'));
 
     // Short-circuit redirects within the simpletest browser.
     variable_set('simpletest_maximum_redirects', 0);
-    $this->drupalGet($edit['alias'], array('absolute' => TRUE, 'https' => FALSE));
+    $this->drupalGet($edit['dst'], array('absolute' => TRUE));
     $this->assertResponse(302);
-    $this->assertEqual($this->drupalGetHeader('Location'), url($edit['alias'], array('https' => TRUE, 'absolute' => TRUE)));
+    $this->assertEqual($this->drupalGetHeader('Location'), $this->_toHTTPS(url($edit['dst'], array('absolute' => TRUE))));
 
     // Clean up
     variable_del('simpletest_maximum_redirects');
@@ -217,8 +221,7 @@ class SecurePagesTestCase extends DrupalWebTestCase {
     $this->assertTrue(strstr($this->drupalGetHeader('Location'), $base_url), t('Open redirect test passed.'));
 
     $this->drupalGet($secure_base_url . $base_path . '?q=' . urlencode('http://example.com/'), array('external' => TRUE));
-    $this->assertResponse(302);
-    $this->assertTrue(strstr($this->drupalGetHeader('Location'), $base_url), t('Open redirect test passed.'));
+    $this->assertResponse(404);
 
     // Clean up
     variable_del('simpletest_maximum_redirects');
@@ -233,7 +236,21 @@ class SecurePagesTestCase extends DrupalWebTestCase {
       'name' => $user->name,
       'pass' => $user->pass_raw,
     );
-    $this->drupalPost('user', $edit, t('Log in'), array('https' => TRUE));
+    $this->drupalPost($this->_toHTTPS(url('user', array('absolute' => TRUE))), $edit, t('Log in'));
+  }
+
+  /**
+   * Helper function, because url() in D6 lacks 'https' => TRUE
+   */
+  function _toHTTPS($url) {
+    return str_replace('http://', 'https://', $url);
+  }
+
+  /**
+   * Helper function, because url() in D6 lacks 'https' => FALSE
+   */
+  function _toHTTP($url) {
+    return str_replace('https://', 'http://', $url);
   }
 
 }
