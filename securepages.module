@@ -21,7 +21,9 @@ function securepages_boot() {
   }
 
   if (!variable_get('securepages_enable', 0) || basename($_SERVER['PHP_SELF']) != 'index.php' || php_sapi_name() == 'cli') {
-    return;
+    if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest') {
+      return;
+    }
   }
 
   /**
@@ -213,7 +215,7 @@ function securepages_match($path) {
    */
   $secure = variable_get('securepages_secure', 1);
   $pages = variable_get('securepages_pages', "node/add*\nnode/*/edit\nuser/*\nadmin*");
-  $ignore = variable_get('securepages_ignore', "*/autocomplete/*\n*/ajax/*");
+  $ignore = variable_get('securepages_ignore', '');
 
   if ($ignore) {
     $regexp = '/^('. preg_replace(array('/(\r\n?|\n)/', '/\\\\\*/', '/(^|\|)\\\\<front\\\\>($|\|)/'), array('|', '.*', '\1'. preg_quote(variable_get('site_frontpage', 'node'), '/') .'\2'), preg_quote($ignore, '/')) .')$/';
