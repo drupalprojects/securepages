@@ -85,7 +85,9 @@ function securepages_form_alter(&$form, &$form_state, $form_id) {
     $page_match = securepages_match($path);
     $role_match = securepages_roles($user);
     if ($role_match) {
-      $form['#action'] = url($path, array('absolute' => TRUE, 'base_url' => securepages_baseurl(TRUE)));
+      if (!$is_https) {
+        $form['#action'] = url($path, array('absolute' => TRUE, 'base_url' => securepages_baseurl(TRUE)));
+      }
       return;
     }
 
