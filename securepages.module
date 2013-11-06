@@ -216,6 +216,7 @@ function securepages_match($path) {
   $secure = variable_get('securepages_secure', 1);
   $pages = variable_get('securepages_pages', "node/add*\nnode/*/edit\nuser/*\nadmin*");
   $ignore = variable_get('securepages_ignore', '');
+  $path = drupal_strtolower(trim($path, '/'));
 
   if ($ignore) {
     $regexp = '/^('. preg_replace(array('/(\r\n?|\n)/', '/\\\\\*/', '/(^|\|)\\\\<front\\\\>($|\|)/'), array('|', '.*', '\1'. preg_quote(variable_get('site_frontpage', 'node'), '/') .'\2'), preg_quote($ignore, '/')) .')$/';
