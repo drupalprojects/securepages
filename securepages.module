@@ -182,8 +182,9 @@ function securepages_match($path) {
   $is_https = securepages_is_secure();
 
   $secure = variable_get('securepages_secure', 1);
-  $pages = variable_get('securepages_pages', SECUREPAGES_PAGES);
-  $ignore = variable_get('securepages_ignore', SECUREPAGES_IGNORE);
+  $pages = drupal_strtolower(variable_get('securepages_pages', SECUREPAGES_PAGES));
+  $ignore = drupal_strtolower(variable_get('securepages_ignore', SECUREPAGES_IGNORE));
+  $path = drupal_strtolower(trim($path, '/'));
 
   // Checks to see if the page matches the current settings.
   if ($ignore) {
