@@ -184,7 +184,7 @@ function securepages_match($path) {
   $secure = variable_get('securepages_secure', 1);
   $pages = drupal_strtolower(variable_get('securepages_pages', SECUREPAGES_PAGES));
   $ignore = drupal_strtolower(variable_get('securepages_ignore', SECUREPAGES_IGNORE));
-  $path = drupal_strtolower(trim($path, '/'));
+  $path = securepages_strtolower(trim($path, '/'));
 
   // Checks to see if the page matches the current settings.
   if ($ignore) {
@@ -271,8 +271,32 @@ function securepages_baseurl($secure = TRUE) {
 }
 
 /**
- * Checks the URL to make sure it is a URL that can be altered.
+ * Lowercase a UTF-8 string.
  *
+ * @param $text
+ * The string to run the operation on.
+ *
+ * @return string
+ * The string in lowercase.
+ *
+ * @ingroup php_wrappers
+ */
+function securepages_strtolower($text) {
+  global $multibyte;
+  if ($multibyte == UNICODE_MULTIBYTE) {
+    return mb_strtolower($text);
+  }
+  else {
+    // Use C-locale for ASCII-only lowercase
+    $text = strtolower($text);
+    // Case flip Latin-1 accented letters
+    $text = preg_replace_callback('/\xC3[\x80-\x96\x98-\x9E]/', '_unicode_caseflip', $text);
+    return $text;
+  }
+} 
+
+/**
+ * Check the url and make sure that it is a url that you can alter this url.
  * @param $url
  *   URL to check.
  */
