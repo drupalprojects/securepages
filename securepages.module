@@ -159,7 +159,6 @@ function securepages_goto($secure) {
     // Setting the redirect headers manually allows them to be cached.
     drupal_set_header('Location: ' . url($url['path'], $url));
     drupal_set_header('Status: ' . '302 Found');
-    print "302 Found";
 
     // Store the response in the page cache.
     drupal_page_footer();
