@@ -292,7 +292,7 @@ function securepages_strtolower($text) {
     $text = preg_replace_callback('/\xC3[\x80-\x96\x98-\x9E]/', '_securepages_unicode_caseflip', $text);
     return $text;
   }
-} 
+}
 
 /**
  * Helper function for case conversion of Latin-1.
@@ -300,7 +300,7 @@ function securepages_strtolower($text) {
  */
 function _securepages_unicode_caseflip($matches) {
   return $matches[0][0] . chr(ord($matches[0][1]) ^ 32);
-} 
+}
 
 /**
  * Check the url and make sure that it is a url that you can alter this url.

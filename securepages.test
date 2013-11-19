@@ -214,7 +214,8 @@ class SecurePagesTestCase extends DrupalWebTestCase {
     $this->drupalGet($url);
     $this->assertResponse(302);
     $this->assertEqual($this->drupalGetHeader('Location'), $this->_toHTTPS(url('user/login', array('absolute' => TRUE))));
-    // $this->assertEqual($this->drupalGetHeader('X-Securepages-Cache'), 'HIT', 'Page was cached.'); @FIXME
+    $cache = cache_get($url, 'cache_page');
+    $this->assertTrue(strstr($cache->headers, 'Status: 3'), '3XX redirect was found in the cache.');
 
     // Clean up
     variable_del('cache');
