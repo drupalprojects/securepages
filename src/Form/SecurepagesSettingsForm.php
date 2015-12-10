@@ -36,12 +36,11 @@ class SecurepagesSettingsForm  extends ConfigFormBase {
     $config = $this->config('securepages.settings');
 
     $form['enable'] = array(
-      '#type' => 'radios',
+      '#type' => 'checkbox',
       '#title' => t('Enable Secure Pages'),
       '#default_value' => $config->get('enable'),
-      '#options' => array(t('Disabled'), t('Enabled')),
       //'#disabled' => !securepages_test(),
-      //'#description' => $this->t('To start using secure pages this setting must be enabled. This setting will only be able to changed when the web server has been configured for SSL.<br /><a href=":url">If this test has failed then go here</a>.', array(':url' => preg_replace(';^http://;i', 'https://', url($_GET['q'], array('absolute' => TRUE))))),
+      '#description' => $this->t('To start using secure pages this setting must be enabled. This setting will only be able to changed when the web server has been configured for SSL.<br /><a href=":url">If this test has failed then go here</a>.', array(':url' => '' /*preg_replace(';^http://;i', 'https://', url($_GET['q'], array('absolute' => TRUE)))*/)),
     );
 
     $form['switch'] = array(

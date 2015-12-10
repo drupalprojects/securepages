@@ -1,6 +1,5 @@
 name: 'Secure Pages'
 type: module
-description: 'Set which pages are always going to be used in secure mode (SSL) Warning: Do not enable this module without configuring your web server to handle SSL with this installation of Drupal
-package: Web services'
+description: 'Set which pages are always going to be used in secure mode (SSL) Warning: Do not enable this module without configuring your web server to handle SSL with this installation of Drupal'
 configure: securepages.admin_settings
 core: '8.x'
