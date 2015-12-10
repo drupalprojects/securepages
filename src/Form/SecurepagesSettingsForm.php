@@ -45,7 +45,7 @@ class SecurepagesSettingsForm  extends ConfigFormBase {
 
     $form['switch'] = array(
       '#type' => 'checkbox',
-      '#title' => $this->t('Switch back to http pages when there are no matches'),
+      '#title' => $this->t('Switch back to HTTP pages when there are no matches'),
       '#default_value' => $config->get('switch'),
     );
 
@@ -76,7 +76,7 @@ class SecurepagesSettingsForm  extends ConfigFormBase {
     $form['pages'] = array(
       '#title' => $this->t('Pages'),
       '#type' => 'textarea',
-      '#default_value' => $config->get('pages'),
+      '#default_value' => implode("\n", $config->get('pages')),
       '#cols' => 40,
       '#rows' => 5,
       '#description' => $this->t("Enter one page per line as Drupal paths. The '*' character is a wildcard. Example paths are '<em>blog</em>' for the main blog page and '<em>blog/*</em>' for every personal blog. '<em>&lt;front&gt;</em>' is the front page."),
@@ -85,16 +85,16 @@ class SecurepagesSettingsForm  extends ConfigFormBase {
     $form['ignore'] = array(
       '#type' => 'textarea',
       '#title' => $this->t('Ignore pages'),
-      '#default_value' => $config->get('ignore'),
+      '#default_value' => implode("\n", $config->get('ignore')),
       '#cols' => 40,
       '#rows' => 5,
-      '#description' => $this->t("The pages listed here will be ignored and be either returned in http or https. Enter one page per line as Drupal paths. The '*' character is a wildcard. Example paths are '<em>blog</em>' for the blog page and '<em>blog/*</em>' for every personal blog. '<em>&lt;front&gt;</em>' is the front page."),
+      '#description' => $this->t("The pages listed here will be ignored and be either returned in HTTP or HTTPS. Enter one page per line as Drupal paths. The '*' character is a wildcard. Example paths are '<em>blog</em>' for the blog page and '<em>blog/*</em>' for every personal blog. '<em>&lt;front&gt;</em>' is the front page."),
     );
 
     $form['roles'] = array(
       '#type' => 'checkboxes',
-      '#title' => 'User roles',
-      '#description' => $this->t('Users with the chosen role(s) are always redirected to https, regardless of path rules.'),
+      '#title' => $this->t('User roles'),
+      '#description' => $this->t('Users with the chosen role(s) are always redirected to HTTPS, regardless of path rules.'),
       '#options' => user_role_names(),
       '#default_value' => $config->get('roles'),
     );
@@ -102,15 +102,15 @@ class SecurepagesSettingsForm  extends ConfigFormBase {
     $form['forms'] = array(
       '#type' => 'textarea',
       '#title' => $this->t('Secure forms'),
-      '#default_value' => $config->get('forms'),
+      '#default_value' => implode("\n", $config->get('forms')),
       '#cols' => 40,
       '#rows' => 5,
-      '#description' => $this->t('List of form ids which will have the https flag set to TRUE.'),
+      '#description' => $this->t('List of form ids which will have the HTTPS flag set to TRUE.'),
     );
 
     $form['debug'] = array(
       '#type' => 'checkbox',
-      '#title' => $this->t('Enable Debugging'),
+      '#title' => $this->t('Enable debugging'),
       '#default_value' => $config->get('debug'),
       '#description' => $this->t('Turn on debugging to allow easier testing of settings.'),
     );
@@ -123,16 +123,32 @@ class SecurepagesSettingsForm  extends ConfigFormBase {
   public function submitForm(array &$form, FormStateInterface $form_state) {
     parent::submitForm($form, $form_state);
     $this->config('securepages.settings')
+      ->set('enable', $form_state->getValue('enable'))
       ->set('switch', $form_state->getValue('switch'))
       ->set('basepath', $form_state->getValue('basepath'))
       ->set('basepath_ssl', $form_state->getValue('basepath_ssl'))
       ->set('secure', $form_state->getValue('secure'))
-      ->set('pages', $form_state->getValue('pages'))
-      ->set('ignore', $form_state->getValue('ignore'))
-      ->set('roles', $form_state->getValue('roles'))
-      ->set('forms', $form_state->getValue('forms'))
+      ->set('pages', $this::explodeValues($form_state->getValue('pages')))
+      ->set('ignore', $this::explodeValues($form_state->getValue('ignore')))
+      ->set('roles', array_filter($form_state->getValue('roles')))
+      ->set('forms', $this::explodeValues($form_state->getValue('forms')))
       ->set('debug', $form_state->getValue('debug'))
       ->save();
+  }
+
+  /**
+   * Explode $values and returned a clean array with options.
+   *
+   * @param string $values
+   *   Values as entered in the form, separated by newlines.
+   *
+   * @return array
+   *   Array formatted trimmed values with empty items removed.
+   */
+  private static function explodeValues($values) {
+    // Convert string to an array, trim whitespace on each item, remove
+    // empty items and reindex array for clean export.
+    return array_values(array_filter(array_map('trim', explode("\n", $values))));
   }
 
 }
