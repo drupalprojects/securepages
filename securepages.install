@@ -1,0 +1,16 @@
+<?php
+
+/**
+ * @file
+ * Installation functions for the Secure Pages module.
+ */
+
+use Drupal\Core\Url;
+
+/**
+ * Implements hook_install().
+ */
+function securepages_install() {
+  // @todo at time of installation, the route does not exist HAHA
+  // drupal_set_message(t('Secure Pages needs to be enabled on <a href=":settings">the settings page</a>.', array(':settings' => Url::fromRoute('securepages.admin_settings')->toString())));
+}
