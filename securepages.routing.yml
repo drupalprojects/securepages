@@ -5,3 +5,10 @@ securepages.admin_settings:
     _title: 'Secure Pages configuration'
   requirements:
     _permission: 'administer site configuration'
+
+securepages.admin_test:
+  path: '/admin/config/system/securepages/test'
+  defaults:
+    _controller: '\Drupal\securepages\TestPage::page'
+  requirements:
+    _permission: 'administer site configuration'

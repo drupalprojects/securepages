@@ -7,8 +7,10 @@
 namespace Drupal\securepages\Form;
 
 use Drupal\Core\Form\ConfigFormBase;
-use Symfony\Component\HttpFoundation\Request;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Url;
+use Drupal\securepages\TestPage;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Defines a form that configures forms module settings.
@@ -39,8 +41,8 @@ class SecurepagesSettingsForm  extends ConfigFormBase {
       '#type' => 'checkbox',
       '#title' => t('Enable Secure Pages'),
       '#default_value' => $config->get('enable'),
-      //'#disabled' => !securepages_test(),
-      '#description' => $this->t('To start using secure pages this setting must be enabled. This setting will only be able to changed when the web server has been configured for SSL.<br /><a href=":url">If this test has failed then go here</a>.', array(':url' => '' /*preg_replace(';^http://;i', 'https://', url($_GET['q'], array('absolute' => TRUE)))*/)),
+      '#disabled' => !TestPage::isHTTPSSupported(),
+      '#description' => $this->t('To start using secure pages this setting must be enabled. This setting will only be possible to change when the web server has been configured for HTTPS. <a href=":url">You can manually visit the test page too</a>.', array(':url' => Url::fromRoute('securepages.admin_test', [], ['https' => TRUE, 'absolute' => TRUE])->toString())),
     );
 
     $form['switch'] = array(
