@@ -9,7 +9,7 @@ namespace Drupal\securepages\Form;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
-use Drupal\securepages\TestPage;
+use Drupal\securepages\Securepages;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
@@ -41,8 +41,8 @@ class SecurepagesSettingsForm  extends ConfigFormBase {
       '#type' => 'checkbox',
       '#title' => t('Enable Secure Pages'),
       '#default_value' => $config->get('enable'),
-      '#disabled' => !TestPage::isHTTPSSupported(),
-      '#description' => $this->t('To start using secure pages this setting must be enabled. This setting will only be possible to change when the web server has been configured for HTTPS. <a href=":url">You can manually visit the test page too</a>.', array(':url' => Url::fromRoute('securepages.admin_test', [], ['https' => TRUE, 'absolute' => TRUE])->toString())),
+      '#disabled' => !Securepages::isHTTPSSupported(),
+      '#description' => $this->t('To start using secure pages this setting must be enabled. This setting will only be possible to change when the web server has been configured for HTTPS. You may need to set the secure base URL below in case of a custom port. <a href=":url">You can manually visit the test page too</a>.', array(':url' => Securepages::getUrl('securepages.admin_test'))),
     );
 
     $form['switch'] = array(
@@ -66,12 +66,12 @@ class SecurepagesSettingsForm  extends ConfigFormBase {
     );
 
     $active_options = [
-      $this->t('Make secure every page except the listed pages.'),
-      $this->t('Make secure only the listed pages.')
+      $this->t('Pages not matching the patterns should be secure'),
+      $this->t('Pages matching the patterns should be secure')
     ];
     $form['secure'] = array(
       '#type' => 'radios',
-      '#title' => $this->t('Pages which will be be secure'),
+      '#title' => $this->t('Which pages will be secure'),
       '#default_value' => $config->get('secure'),
       '#options' => $active_options,
     );
