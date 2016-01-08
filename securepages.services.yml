@@ -2,5 +2,5 @@ services:
   securepages.redirect:
     class: Drupal\securepages\EventSubscriber\SecurepagesSubscriber
     tags:
-      - {name: event_subscriber}
+      - { name: event_subscriber }
 
