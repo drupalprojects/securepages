@@ -61,6 +61,7 @@ class SecurepagesTest extends WebTestBase {
    * Test submitting the settings form.
    */
   function _testSettingsForm() {
+    // Need to log in and use the HTTPS form so we can enable the feature there.
     $this->drupalLoginHttps($this->drupalCreateUser(['administer site configuration']));
     $this->drupalPostForm(
       Securepages::getUrl('securepages.admin_settings'),
@@ -97,14 +98,14 @@ class SecurepagesTest extends WebTestBase {
   function _testLocale() {
     $french = ConfigurableLanguage::createFromLangcode('fr');
     $french->save();
-    $this->drupalGet('fr/user', ['https' => TRUE]);
+    $this->drupalGet('fr/user');
     $this->assertResponse(200);
-    $this->assertUrl(Url::fromRoute('user.login', [], ['https' => TRUE, 'absolute' => TRUE, 'language' => $french]));
+    $this->assertUrl(Url::fromRoute('<front>', [], ['https' => TRUE, 'absolute' => TRUE])->toString() . 'fr/user/login');
     $this->assertTrue(strstr($this->url, 'fr/user'), t('URL contains language prefix.'));
 
-    $this->drupalGet('fr', ['https' => TRUE]);
+    $this->drupalGet('fr');
     $this->assertResponse(200);
-    $this->assertUrl(Url::fromRoute('<front>', [], ['https' => TRUE, 'absolute' => TRUE, 'language' => $french]));
+    $this->assertUrl(Url::fromRoute('<front>', [], ['https' => TRUE, 'absolute' => TRUE])->toString() . 'fr');
   }
 
   /**
