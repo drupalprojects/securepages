@@ -43,7 +43,7 @@ class Securepages {
         //Securepages::log('Redirect path to secure.', $path);
         return TRUE;
       }
-      elseif (!$page_match && $is_https && $switch && !$role_match) {
+      elseif ($page_match === FALSE && $is_https && $switch && !$role_match) {
         //Securepages::log('Redirect path to insecure.', $path);
         return FALSE;
       }
@@ -68,31 +68,63 @@ class Securepages {
   /**
    * Match the current path against the configured settings.
    *
-   * @return bool
-   *   TRUE if there is a match, FALSE otherwise.
+   * @return bool|NULL
+   *   - FALSE: Path should be non-secure.
+   *   - TRUE: Path should be secure.
+   *   - NULL: No explicit information.
    */
   public static function matchCurrentPath() {
-    // Convert path to lowercase. This allows comparison of the same path
-    // with different case. Ex: /Page, /page, /PAGE.
-    $pages = implode("\n", \Drupal::config('securepages.settings')->get('pages'));
-    $pages = Unicode::strtolower($pages);
-    if (!$pages) {
-      return FALSE;
-    }
-
     $request = \Drupal::requestStack()->getCurrentRequest();
     /** @var \Drupal\Core\Path\CurrentPathStack $current_path */
     $current_path_stack = \Drupal::service('path.current');
+    return Securepages::matchPath($current_path_stack->getPath($request));
+  }
+
+  /**
+   * Match path against securepages settings.
+   *
+   * @param string $path
+   *   Path to match against settings.
+   *
+   * @return bool|NULL
+   *   - FALSE: Path should be non-secure.
+   *   - TRUE: Path should be secure.
+   *   - NULL: No explicit information.
+   */
+  public static function matchPath($path) {
+    // Convert paths to lowercase. This allows comparison of the same path
+    // with different case. Ex: /Page, /page, /PAGE.
+    $config = \Drupal::config('securepages.settings');
+    $pages = Unicode::strtolower(implode("\n", $config->get('pages')));
+    $ignore = Unicode::strtolower(implode("\n", $config->get('ignore')));
+
+    $request = \Drupal::requestStack()->getCurrentRequest();
     /** @var \Drupal\Core\Path\AliasManager $alias_manager */
     $alias_manager = \Drupal::service('path.alias_manager');
     /** @var \Drupal\Core\Path\PathMatcher $path_matcher */
     $path_matcher = \Drupal::service('path.matcher');
 
     // Compare the lowercase path alias (if any) and internal path.
-    $path = rtrim($current_path_stack->getPath($request), '/');
+    $path = rtrim($path, '/');
     $path_alias = Unicode::strtolower($alias_manager->getAliasByPath($path));
 
-    return $path_matcher->matchPath($path_alias, $pages) || (($path != $path_alias) && $path_matcher->matchPath($path, $pages));
+    // Checks to see if the page matches the current settings.
+    if ($ignore) {
+      if ($path_matcher->matchPath($path_alias, $ignore) || (($path != $path_alias) && $path_matcher->matchPath($path, $ignore))) {
+        //Securepages::log('Ignored path (Path: "@path", Line: @line, Pattern: "@pattern")', $path, $ignore);
+        return $request->isSecure() ? TRUE : FALSE;
+      }
+    }
+    if ($pages) {
+      $result = $path_matcher->matchPath($path_alias, $pages) || (($path != $path_alias) && $path_matcher->matchPath($path, $pages));
+      if (!($request->isSecure() xor $result)) {
+        //Securepages::log('Secure path (Path: "@path", Line: @line, Pattern: "@pattern")', $path, $pages);
+      }
+      return !($request->isSecure() xor $result) ? TRUE : FALSE;
+    }
+    else {
+      return NULL;
+    }
   }
 
   /**
@@ -109,15 +141,15 @@ class Securepages {
    *   (optional) Whether to generate the secure URL or the insecure URL.
    *   Defaults to secure.
    *
-   * @return string
-   *   The secure base URL.
+   * @return \Drupal\Core\Url
+   *   The secure or non-secure base URL.
    */
   public static function getUrl($route_name = '<front>', $route_parameters = [], $options = [], $secure = TRUE) {
     $options += ['https' => $secure, 'absolute' => TRUE];
     if ($config_url = \Drupal::config('securepages.settings')->get('basepath' . ($secure ? '_ssl' : ''))) {
       $options['base_url'] = $config_url;
     }
-    return Url::fromRoute($route_name, $route_parameters, $options)->toString();
+    return Url::fromRoute($route_name, $route_parameters, $options);
   }
 
   /**
@@ -138,7 +170,7 @@ class Securepages {
       $client = \Drupal::httpClient();
       $response = $client->request(
         'GET',
-        Securepages::getUrl('securepages.admin_test')
+        Securepages::getUrl('securepages.admin_test')->toString()
       );
       return $response->getStatusCode() === 200;
     }

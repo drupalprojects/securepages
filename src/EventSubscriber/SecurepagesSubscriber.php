@@ -12,6 +12,8 @@ use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpKernel\Event\GetResponseEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Drupal\securepages\Securepages;
+use Symfony\Component\HttpKernel\Event\FilterResponseEvent;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 
 class SecurepagesSubscriber implements EventSubscriberInterface {
 
@@ -20,7 +22,7 @@ class SecurepagesSubscriber implements EventSubscriberInterface {
    *
    * @param \Symfony\Component\HttpKernel\Event\GetResponseEvent $event
    */
-  public function checkForRedirection(GetResponseEvent $event) {
+  public function checkRequestRedirection(GetResponseEvent $event) {
     $config = \Drupal::config('securepages.settings');
     if ($config->get('enable') && php_sapi_name() != 'cli') {
       $redirect = Securepages::checkRedirect();
@@ -28,10 +30,53 @@ class SecurepagesSubscriber implements EventSubscriberInterface {
         $request = $event->getRequest();
         $route_match = RouteMatch::createFromRequest($request);
         $route_name = $route_match->getRouteName();
-        $route_parameters = $route_match->getParameters()->all();
+        $route_parameters = $route_match->getRawParameters()->all();
         $qs = $request->getQueryString();
-        $url = Securepages::getUrl($route_name, $route_parameters, [], $redirect) . ($qs ? '?' . $qs : '');
+        $url = Securepages::getUrl($route_name, $route_parameters, [], $redirect)->toString() . ($qs ? '?' . $qs : '');
         $event->setResponse(new TrustedRedirectResponse($url));
+      }
+    }
+  }
+
+  /**
+   * Event handler for response processing. Alters redirects if needed.
+   *
+   * @param \Symfony\Component\HttpKernel\Event\FilterResponseEvent $event
+   */
+  public function checkResponseRedirection(FilterResponseEvent $event) {
+    $response = $event->getResponse();
+    if ($response instanceOf RedirectResponse) {
+      $config = \Drupal::config('securepages.settings');
+      if ($config->get('enable')) {
+        $role_match = Securepages::matchCurrentUser();
+        $page_match = Securepages::matchCurrentPath();
+        $request = \Drupal::requestStack()->getCurrentRequest();
+        $is_https = $request->isSecure();
+        $target = $response->getTargetUrl();
+
+        if ($role_match || $page_match) {
+          // If we are not already on HTTPS and the redirect target is HTTP,
+          // replace the non-secure base with a secure base.
+          if (!$is_https && (strpos($target, 'http://') === 0)) {
+            $target = str_replace(
+              Securepages::getUrl('<front>', [], [], FALSE)->toString(),
+              Securepages::getUrl('<front>')->toString(),
+              $target
+            );
+            $response->setTargetUrl($target);
+          }
+        }
+        elseif ($page_match === FALSE && $is_https && $config->get('switch') && (strpos($target, 'https://') === 0)) {
+          // If we are not already on HTTP, should switch to HTTP and the
+          // redirect target is HTTPS, replace the secure base with a non-secure
+          // base.
+          $target = str_replace(
+            Securepages::getUrl('<front>')->toString(),
+            Securepages::getUrl('<front>', [], [], FALSE)->toString(),
+            $target
+          );
+          $response->setTargetUrl($target);
+        }
       }
     }
   }
@@ -40,7 +85,9 @@ class SecurepagesSubscriber implements EventSubscriberInterface {
    * {@inheritdoc}
    */
   static function getSubscribedEvents() {
-    $events[KernelEvents::REQUEST][] = array('checkForRedirection');
+    $events[KernelEvents::REQUEST][] = array('checkRequestRedirection');
+    $events[KernelEvents::RESPONSE][] = array('checkResponseRedirection');
     return $events;
   }
+
 }
