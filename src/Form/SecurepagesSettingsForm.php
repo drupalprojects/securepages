@@ -42,7 +42,7 @@ class SecurepagesSettingsForm  extends ConfigFormBase {
       '#title' => t('Enable Secure Pages'),
       '#default_value' => $config->get('enable'),
       '#disabled' => !Securepages::isHTTPSSupported(),
-      '#description' => $this->t('To start using secure pages this setting must be enabled. This setting will only be possible to change when the web server has been configured for HTTPS. You may need to set the secure base URL below in case of a custom port. <a href=":url">You can manually visit the test page too</a>.', array(':url' => Securepages::getUrl('securepages.admin_test'))),
+      '#description' => $this->t('To start using secure pages this setting must be enabled. This setting will only be possible to change when the web server has been configured for HTTPS. You may need to set the secure base URL below in case of a custom port. <a href=":url">You can manually visit the test page too</a>.', array(':url' => Securepages::getUrl('securepages.admin_test')->toString())),
     );
 
     $form['switch'] = array(
