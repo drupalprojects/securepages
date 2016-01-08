@@ -170,7 +170,9 @@ class Securepages {
       $client = \Drupal::httpClient();
       $response = $client->request(
         'GET',
-        Securepages::getUrl('securepages.admin_test')->toString()
+        Securepages::getUrl('<front>')->toString(),
+        // Ignore self-signed certificate for this test.
+        ['verify' => FALSE]
       );
       return $response->getStatusCode() === 200;
     }
