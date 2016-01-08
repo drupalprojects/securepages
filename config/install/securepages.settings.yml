@@ -15,4 +15,4 @@ ignore: {  }
 roles: {  }
 forms:
   - user_login_form
-debug: 0
+debug: false
