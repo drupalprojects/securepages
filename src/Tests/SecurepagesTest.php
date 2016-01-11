@@ -7,6 +7,7 @@
 
 namespace Drupal\securepages\Tests;
 
+use Drupal\comment\Tests\CommentTestTrait;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Url;
 use Drupal\language\Entity\ConfigurableLanguage;
@@ -19,6 +20,8 @@ use Drupal\simpletest\WebTestBase;
  * @group securepages
  */
 class SecurepagesTest extends WebTestBase {
+
+  use CommentTestTrait;
 
   /**
    * Modules to enable.
@@ -34,6 +37,12 @@ class SecurepagesTest extends WebTestBase {
    *   List of strings.
    */
   protected $pages_default = ['/node/add*', '/node/*/edit', '/node/*/delete', '/user', '/user/*', '/admin', '/admin/*'];
+
+  public function setUp() {
+    parent::setUp();
+    $this->drupalCreateContentType(['type' => 'article']);
+    $this->addDefaultCommentField('node', 'article');
+  }
 
   /**
    * Runs all the tests in a sequence to avoid multiple re-installs.
@@ -61,7 +70,6 @@ class SecurepagesTest extends WebTestBase {
    * Test submitting the settings form.
    */
   function _testSettingsForm() {
-    // Need to log in and use the HTTPS form so we can enable the feature there.
     $this->drupalLoginHttps($this->drupalCreateUser(['administer site configuration']));
     $this->drupalPostForm(
       Securepages::getUrl('securepages.admin_settings'),
