@@ -48,8 +48,14 @@ class FormBuilder extends CoreFormBuilder {
   /**
    * {@inheritdoc}
    */
-  public function renderPlaceholderFormAction() {
-    $form_action = parent::renderPlaceholderFormAction();
+  public function renderPlaceholderFormAction($form_id) {
+    // This duplicates the logic of the parent method. We need to duplicate it
+    // because we need to pass an additional argument to ::buildFormAction().
+    $form_action = [
+      '#type' => 'markup',
+      '#markup' => $this->buildFormAction($form_id),
+      '#cache' => ['contexts' => ['url.path', 'url.query_args']],
+    ];
 
     // Due to dependency on Request::isSecure().
     $form_action['#cache']['contexts'][] = 'url.site';
@@ -68,7 +74,7 @@ class FormBuilder extends CoreFormBuilder {
   /**
    * {@inheritdoc}
    */
-  protected function buildFormAction() {
+  protected function buildFormAction($form_id) {
     $url = parent::buildFormAction();
 
     $request = $this->requestStack->getCurrentRequest();
@@ -79,7 +85,7 @@ class FormBuilder extends CoreFormBuilder {
     $path = \Drupal::service('path.current')->getPath($request);
     $path_match = Securepages::matchPath($path);
     $role_match = Securepages::matchCurrentUser();
-    $form_match = TRUE; // @todo Port & use securepages_match_form().
+    $form_match = TRUE; // @todo Port & use securepages_match_form($form_id).
 
     // @todo Question whether all this crazy conditionality is really necessary! It'd be better to remove it. Even more so because Drupal 8 is route-based, not path-based.
     if ($role_match || ($path_match && !$is_https) || !(!$path_match && $is_https && $config->get('switch')) || $form_match) {
