@@ -4,3 +4,68 @@
  * @file
  * Allows certain pages to be viewable only via HTTPS.
  */
+
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\securepages\Securepages;
+
+/**
+ * Implements hook_form_alter().
+ */
+function securepages_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  // Add a post render step to the form so we can alter the processed form
+  // action.
+  $form['#pre_render'][] = 'securepages_alter_form_action';
+}
+
+/**
+ * Post render callback for the form to alter the action if needed.
+ */
+function securepages_alter_form_action($form) {
+  $config = \Drupal::config('securepages.settings');
+  if (!$config->get('enabled')) {
+    return;
+  }
+
+  if (isset($form['#action']) && Securepages::canAlterUrl($form['#action'])) {
+    $is_https = \Drupal::requestStack()->getCurrentRequest()->isSecure();
+
+    // Remove the base_path, and extract the path component.
+    $url = substr(rawurldecode($form['#action']), strlen(base_path()));
+
+    // Filter out any language prefixes as it will be automatically added to
+    // the URL again.
+    if (!empty($language->prefix) && preg_match('/^' . $language->prefix . '/', $url) > 0) {
+      $url = preg_replace('/^' . $language->prefix . '\//', '', $url);
+    }
+
+    $url = drupal_parse_url($url);
+    $path = drupal_get_normal_path($url['path']);
+
+    $page_match = Securepages::matchPath($path);
+    $role_match = Securepages::matchCurrentUser();
+    if ($role_match) {
+      if (!$is_https) {
+        $form['#https'] = TRUE;
+      }
+      return;
+    }
+
+    if (isset($form['#https'])) {
+      // if the #https is set don't reset it as module that set it knows better.
+    }
+    elseif ($page_match && !$is_https) {
+      $form['#https'] = TRUE;
+    }
+    elseif ($page_match === 0 && $is_https && $config->get('switch')) {
+      $url['https'] = FALSE;
+      $url['absolute'] = TRUE;
+      $form['#action'] = url($url['path'], $url);
+    }
+  }
+
+  // Check to see if this form needs to be secured.
+  $secure_form = securepages_match_form($form_id, $form_state['build_info']['args']);
+  if (!$is_https && $secure_form) {
+    $form['#https'] = TRUE;
+  }
+}
