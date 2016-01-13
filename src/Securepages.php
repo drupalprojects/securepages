@@ -7,6 +7,7 @@
 namespace Drupal\securepages;
 
 use Drupal\Component\Utility\Unicode;
+use Drupal\Component\Utility\UrlHelper;
 use Drupal\Core\Url;
 use GuzzleHttp\Exception\RequestException;
 
@@ -180,4 +181,16 @@ class Securepages {
       return FALSE;
     }
   }
+
+  /**
+   * Checks the URL to make sure it is a URL that can be altered.
+   *
+   * @param string $url
+   *   URL to check.
+   */
+  public static function canAlterUrl($url) {
+    $base = Url::fromRoute('<front>', [], ['absolute' => TRUE])->toString();
+    return (!UrlHelper::isExternal($url)) || UrlHelper::externalIsLocal($url, $base);
+  }
+
 }
