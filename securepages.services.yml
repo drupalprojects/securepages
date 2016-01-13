@@ -3,4 +3,7 @@ services:
     class: Drupal\securepages\EventSubscriber\SecurepagesSubscriber
     tags:
       - { name: event_subscriber }
-
+  securepages.form_builder:
+    class: Drupal\securepages\FormBuilder
+    decorates: form_builder
+    parent: form_builder
