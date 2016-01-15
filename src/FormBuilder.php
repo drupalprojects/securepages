@@ -48,7 +48,7 @@ class FormBuilder extends CoreFormBuilder {
   /**
    * {@inheritdoc}
    */
-  public function renderPlaceholderFormAction($form_id) {
+  public function renderPlaceholderFormAction($form_id = '') {
     // This duplicates the logic of the parent method. We need to duplicate it
     // because we need to pass an additional argument to ::buildFormAction().
     $form_action = [
@@ -74,7 +74,7 @@ class FormBuilder extends CoreFormBuilder {
   /**
    * {@inheritdoc}
    */
-  protected function buildFormAction($form_id) {
+  protected function buildFormAction($form_id = '') {
     $url = parent::buildFormAction();
 
     $request = $this->requestStack->getCurrentRequest();
