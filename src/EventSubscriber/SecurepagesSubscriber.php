@@ -6,6 +6,7 @@
 
 namespace Drupal\securepages\EventSubscriber;
 
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Routing\RouteMatch;
 use Drupal\Core\Routing\TrustedRedirectResponse;
 use Symfony\Component\HttpKernel\KernelEvents;
@@ -18,12 +19,26 @@ use Symfony\Component\HttpFoundation\RedirectResponse;
 class SecurepagesSubscriber implements EventSubscriberInterface {
 
   /**
+   * The config factory.
+   *
+   * @var \Drupal\Core\Config\ConfigFactoryInterface
+   */
+  protected $configFactory;
+
+  /**
+   * Constructs a new SecurepagesSubscriber.
+   */
+  public function __construct(ConfigFactoryInterface $config_factory) {
+    $this->configFactory = $config_factory;
+  }
+
+  /**
    * Event handler for request processing. Redirects as needed.
    *
    * @param \Symfony\Component\HttpKernel\Event\GetResponseEvent $event
    */
   public function checkRequestRedirection(GetResponseEvent $event) {
-    $config = \Drupal::config('securepages.settings');
+    $config = $this->configFactory->get('securepages.settings');
     if ($config->get('enable') && php_sapi_name() != 'cli') {
       $redirect = Securepages::checkRedirect();
       if ($redirect !== NULL) {
@@ -46,12 +61,11 @@ class SecurepagesSubscriber implements EventSubscriberInterface {
   public function checkResponseRedirection(FilterResponseEvent $event) {
     $response = $event->getResponse();
     if ($response instanceOf RedirectResponse) {
-      $config = \Drupal::config('securepages.settings');
+      $config = $this->configFactory->get('securepages.settings');
       if ($config->get('enable')) {
         $role_match = Securepages::matchCurrentUser();
         $page_match = Securepages::matchCurrentPath();
-        $request = \Drupal::requestStack()->getCurrentRequest();
-        $is_https = $request->isSecure();
+        $is_https = $event->getRequest()->isSecure();
         $target = $response->getTargetUrl();
 
         if ($role_match || $page_match) {

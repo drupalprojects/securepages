@@ -1,6 +1,7 @@
 services:
   securepages.redirect:
     class: Drupal\securepages\EventSubscriber\SecurepagesSubscriber
+    arguments: ['@config.factory']
     tags:
       - { name: event_subscriber }
   securepages.form_builder:
