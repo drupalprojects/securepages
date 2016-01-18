@@ -9,6 +9,7 @@ namespace Drupal\securepages\Tests;
 
 use Drupal\comment\Tests\CommentTestTrait;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\Url;
 use Drupal\language\Entity\ConfigurableLanguage;
 use Drupal\securepages\Securepages;
@@ -79,7 +80,7 @@ class SecurepagesTest extends WebTestBase {
     $this->assertRaw(t('The configuration options have been saved.'));
 
     // Clean up.
-    $this->drupalLogout();
+    $this->drupalLogoutHttps();
   }
 
   /**
@@ -88,13 +89,15 @@ class SecurepagesTest extends WebTestBase {
   function _testMatch() {
     \Drupal::configFactory()->getEditable('securepages.settings')->set('ignore', ['*/autocomplete/*'])->save();
 
-    $this->assertTrue(Securepages::matchPath('/user'), 'user matches.');
-    $this->assertTrue(Securepages::matchPath('/user/login'), 'user/login matches.');
-    $this->assertTrue(Securepages::matchPath('/admin/modules'), 'path admin/modules matches.');
-    $this->assertFalse(Securepages::matchPath('/node'), 'path node does not match.');
+    $request = \Drupal::requestStack()->getCurrentRequest();
+    $test_request_is_https = $request->isSecure();
+    $this->assertEqual(Securepages::matchPath('/user'), !$test_request_is_https, 'user matches.');
+    $this->assertEqual(Securepages::matchPath('/user/login'), !$test_request_is_https, 'user/login matches.');
+    $this->assertEqual(Securepages::matchPath('/admin/modules'), !$test_request_is_https, 'path admin/modules matches.');
+    $this->assertEqual(Securepages::matchPath('/node'), $test_request_is_https, 'path node does not match.');
 
     $request = \Drupal::requestStack()->getCurrentRequest();
-    $this->assertEqual(Securepages::matchPath('/user/autocomplete/alice'), $request->isSecure() ? TRUE : FALSE, 'autocomplete path is ignored.');
+    $this->assertEqual(Securepages::matchPath('/user/autocomplete/alice'), $test_request_is_https, 'autocomplete path is ignored.');
 
     // Clean up.
     \Drupal::configFactory()->getEditable('securepages.settings')->set('ignore', [])->save();
@@ -110,47 +113,40 @@ class SecurepagesTest extends WebTestBase {
     $this->assertResponse(200);
     $this->assertUrl(Url::fromRoute('<front>', [], ['https' => TRUE, 'absolute' => TRUE])->toString() . 'fr/user/login');
     $this->assertTrue(strstr($this->url, 'fr/user'), t('URL contains language prefix.'));
-
-    $this->drupalGet('fr');
-    $this->assertResponse(200);
-    $this->assertUrl(Url::fromRoute('<front>', [], ['https' => TRUE, 'absolute' => TRUE])->toString() . 'fr');
   }
 
   /**
    * Tests for anonymous browsing with securepages.
    */
   function _testAnonymous() {
-    // Visit the home page and /node with plain HTTP.
+    // Visit the home page (same as user page) with plain HTTP.
     $this->drupalGet('', ['https' => FALSE]);
-    $this->assertResponse(200);
-    $this->assertUrl(Url::fromRoute('<front>', [], ['https' => FALSE, 'absolute' => TRUE]));
-    $this->drupalGet('node', ['https' => FALSE]);
-    $this->assertResponse(200);
-    $this->assertUrl(Url::fromUri('internal:/node', [], ['https' => FALSE, 'absolute' => TRUE]));
-
-    // Visit the login page and confirm that browser is redirected to HTTPS.
-    $this->drupalGet('user', ['https' => FALSE]);
-    $this->assertResponse(200);
+    $this->assertResponse(302);
     $this->assertUrl(Url::fromRoute('user.login', [], ['https' => TRUE, 'absolute' => TRUE]));
 
-    // Visit the home page and /node with HTTPS and confirm that no redirection happens.
+    // Visit the login page (same as front page in tests) with plain HTTP.
+    $this->drupalGet('user/login', ['https' => FALSE]);
+    $this->assertResponse(302);
+    $this->assertUrl(Url::fromRoute('user.login', [], ['https' => TRUE, 'absolute' => TRUE]));
+
+    // Visit the home page and login with HTTPS.
     $this->drupalGet('', ['https' => TRUE]);
+    $this->assertResponse(302);
+    $this->assertUrl(Url::fromRoute('user.login', [], ['https' => TRUE, 'absolute' => TRUE]));
+    $this->drupalGet('user/login', ['https' => TRUE]);
     $this->assertResponse(200);
-    $this->assertUrl(Url::fromRoute('<front>', [], ['https' => TRUE, 'absolute' => TRUE]));
-    $this->drupalGet('node', ['https' => TRUE]);
-    $this->assertResponse(200);
-    $this->assertUrl(Url::fromUri('internal:/node', [], ['https' => TRUE, 'absolute' => TRUE]));
+    $this->assertUrl(Url::fromRoute('user.login', [], ['https' => TRUE, 'absolute' => TRUE]));
 
     // Enable "Switch back to http pages when there are no matches".
     \Drupal::configFactory()->getEditable('securepages.settings')->set('switch', TRUE)->save();
 
-    // Visit the home page and /node with HTTPS and confirm that switch-back happens.
+    // Visit the home page and user with HTTPS and confirm the switch-back.
     $this->drupalGet('', ['https' => TRUE]);
-    $this->assertResponse(200);
-    $this->assertUrl(Url::fromRoute('<front>', [], ['https' => FALSE, 'absolute' => TRUE]));
-    $this->drupalGet('node', ['https' => TRUE]);
-    $this->assertResponse(200);
-    $this->assertUrl(Url::fromRoute('<front>', [], ['https' => FALSE, 'absolute' => TRUE]));
+    $this->assertResponse(302);
+    $this->assertUrl(Url::fromRoute('user.login', [], ['https' => FALSE, 'absolute' => TRUE]));
+    $this->drupalGet('user/login', ['https' => TRUE]);
+    $this->assertResponse(302);
+    $this->assertUrl(Url::fromRoute('user.login', [], ['https' => FALSE, 'absolute' => TRUE]));
 
     // Clean up.
     \Drupal::configFactory()->getEditable('securepages.settings')->set('switch', FALSE)->save();
@@ -380,10 +376,32 @@ class SecurepagesTest extends WebTestBase {
     if (isset($this->sessionId)) {
       $account->session_id = $this->sessionId;
     }
-    $pass = $this->assert($this->drupalUserIsLoggedIn($account), t('User %name successfully logged in.', array('%name' => $account->getAccountName())), 'User login');
+    $pass = $this->assertRaw('>' . $account->getAccountName() . '<', t('User %name successfully logged in.', array('%name' => $account->getAccountName())), 'User login');
     if ($pass) {
       $this->loggedInUser = $account;
       $this->container->get('current_user')->setAccount($account);
+    }
+  }
+
+  /**
+   * Logs a user out of the internal browser and confirms.
+   *
+   * Confirms logout by checking the login page.
+   */
+  protected function drupalLogoutHttps() {
+    // Make a request to the logout page, and redirect to the user page, the
+    // idea being if you were properly logged out you should be seeing a login
+    // screen.
+    $this->drupalGet(Securepages::getUrl('user.logout', array('query' => array('destination' => 'user/login'))));
+    $this->assertResponse(200, 'User was logged out.');
+    $pass = $this->assertField('name', 'Username field found.', 'Logout');
+    $pass = $pass && $this->assertField('pass', 'Password field found.', 'Logout');
+
+    if ($pass) {
+      // @see WebTestBase::drupalUserIsLoggedIn()
+      unset($this->loggedInUser->session_id);
+      $this->loggedInUser = FALSE;
+      $this->container->get('current_user')->setAccount(new AnonymousUserSession());
     }
   }
 

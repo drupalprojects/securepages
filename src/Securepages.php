@@ -37,15 +37,15 @@ class Securepages {
       $page_match = Securepages::matchCurrentPath();
 
       if ($role_match && !$is_https) {
-        //Securepages::log('Redirect user to secure.', $path);
+        Securepages::log('Redirect user to secure on @path.', $path);
         return TRUE;
       }
       elseif ($page_match && !$is_https) {
-        //Securepages::log('Redirect path to secure.', $path);
+        Securepages::log('Redirect path to secure on @path.', $path);
         return TRUE;
       }
       elseif ($page_match === FALSE && $is_https && $switch && !$role_match) {
-        //Securepages::log('Redirect path to insecure.', $path);
+        Securepages::log('Redirect path to insecure on @path.', $path);
         return FALSE;
       }
     }
@@ -113,19 +113,43 @@ class Securepages {
     if ($ignore) {
       if ($path_matcher->matchPath($path_alias, $ignore) || (($path != $path_alias) && $path_matcher->matchPath($path, $ignore))) {
         //Securepages::log('Ignored path (Path: "@path", Line: @line, Pattern: "@pattern")', $path, $ignore);
-        return $request->isSecure() ? TRUE : FALSE;
+        return $request->isSecure();
       }
     }
     if ($pages) {
       $result = $path_matcher->matchPath($path_alias, $pages) || (($path != $path_alias) && $path_matcher->matchPath($path, $pages));
-      if (!($request->isSecure() xor $result)) {
+      if (!($config->get('secure') xor $result)) {
         //Securepages::log('Secure path (Path: "@path", Line: @line, Pattern: "@pattern")', $path, $pages);
       }
-      return !($request->isSecure() xor $result) ? TRUE : FALSE;
+      return !($config->get('secure') xor $result);
     }
     else {
       return NULL;
     }
+  }
+
+  /**
+   * Match form identifier against forms configured.
+   *
+   * @param string $form_id
+   *   The form identifier.
+   *
+   * @return bool
+   *   Whether the form identifier matched the configured identifiers.
+   */
+  public static function matchFormId($form_id) {
+    $config = \Drupal::config('securepages.settings');
+    $forms = Unicode::strtolower(implode("\n", $config->get('forms')));
+
+    /** @var \Drupal\Core\Path\PathMatcher $path_matcher */
+    $path_matcher = \Drupal::service('path.matcher');
+
+    if ($path_matcher->matchPath($form_id, $forms)) {
+      //Securepages::log('Secure Form (Form: "@path", Line: @line, Pattern: "@pattern")', $form_id, $forms);
+      return TRUE;
+    }
+
+    return FALSE;
   }
 
   /**
@@ -191,6 +215,10 @@ class Securepages {
   public static function canAlterUrl($url) {
     $base = Url::fromRoute('<front>', [], ['absolute' => TRUE])->toString();
     return (!UrlHelper::isExternal($url)) || UrlHelper::externalIsLocal($url, $base);
+  }
+
+  protected function log($message, $path, $pattern = NULL) {
+    debug($message);
   }
 
 }

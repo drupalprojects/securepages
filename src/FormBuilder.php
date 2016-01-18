@@ -85,11 +85,10 @@ class FormBuilder extends CoreFormBuilder {
     $path = \Drupal::service('path.current')->getPath($request);
     $path_match = Securepages::matchPath($path);
     $role_match = Securepages::matchCurrentUser();
-    $form_match = TRUE; // @todo Port & use securepages_match_form($form_id).
+    $form_match = Securepages::matchFormId($form_id);
 
-    // @todo Question whether all this crazy conditionality is really necessary! It'd be better to remove it. Even more so because Drupal 8 is route-based, not path-based.
     if ($role_match || ($path_match && !$is_https) || !(!$path_match && $is_https && $config->get('switch')) || $form_match) {
-      $url = $config->get('basepath_ssl') . $url;
+      $url = rtrim(Securepages::getUrl('<front>')->toString(), '/') . $url;
     }
 
     return $url;
