@@ -217,8 +217,24 @@ class Securepages {
     return (!UrlHelper::isExternal($url)) || UrlHelper::externalIsLocal($url, $base);
   }
 
-  protected function log($message, $path, $pattern = NULL) {
-    debug($message);
+  /**
+   * Log a message for debugging purposes.
+   *
+   * @param string $message
+   *   Message to be logged. Potential placeholders include @path and @pattern.
+   * @param string $path
+   *   Path being redirected.
+   * @param string $pattern
+   *   (Optional) pattern being matched, such as form ids or paths compared.
+   */
+  protected static function log($message, $path, $pattern = NULL) {
+    if (\Drupal::config('securepages.settings')->get('debug')) {
+      $options = [
+        '@path' => $path,
+        '@pattern' => $pattern,
+      ];
+      debug(t($message, $options));
+    }
   }
 
 }
