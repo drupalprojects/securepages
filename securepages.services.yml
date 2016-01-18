@@ -7,3 +7,8 @@ services:
     class: Drupal\securepages\FormBuilder
     decorates: form_builder
     parent: form_builder
+  securelogin.path_processor:
+    class: Drupal\securepages\SecurepagesPathProcessor
+    arguments: ['@config.factory']
+    tags:
+      - { name: path_processor_outbound }
