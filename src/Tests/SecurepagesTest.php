@@ -180,7 +180,7 @@ class SecurepagesTest extends WebTestBase {
       $config->set('pages', ['/comment/reply/*', '/user*'])->save();
       $this->drupalGet('node/' . $node->id(), ['https' => FALSE]);
       $this->assertFieldByXPath('//form[@class="comment-form" and starts-with(@action, "https:")]', NULL, "The $mode comment form action is https.");
-      $this->drupalPostForm(NULL, ['comment_body[und][0][value]' => 'test comment'], t('Save'));
+      $this->drupalPostForm(NULL, ['comment_body[0][value]' => 'test comment'], t('Save'));
       $this->assertRaw(t('Your comment has been posted.'));
 
       // Test HTTPS posting to plain HTTP.
@@ -188,7 +188,7 @@ class SecurepagesTest extends WebTestBase {
       $this->drupalGet('node/' . $node->id(), ['https' => TRUE]);
       $this->assertUrl(Url::fromRoute('entity.node.canonical', ['node' => $node->id()], ['https' => TRUE, 'absolute' => TRUE]));
       $this->assertFieldByXPath('//form[@class="comment-form" and starts-with(@action, "http:")]', NULL, "The $mode comment form action is http.");
-      $this->drupalPostForm(NULL, ['comment_body[und][0][value]' => 'test'], t('Save'));
+      $this->drupalPostForm(NULL, ['comment_body[0][value]' => 'test'], t('Save'));
       $this->assertRaw(t('Your comment has been posted.'));
     }
     $this->drupalLogout();
