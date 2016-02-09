@@ -36,9 +36,9 @@ class FormBuilder extends CoreFormBuilder {
       // https://www.drupal.org/node/2562341.
       $placeholder = 'form_action_' . hash('crc32b', __METHOD__);
 
-      $form['#attached']['placeholders'][$placeholder] = [
-        '#lazy_builder' => ['securepages.form_builder:renderPlaceholderFormAction', [$form_id]],
-      ];
+//      $form['#attached']['placeholders'][$placeholder] = [
+//        '#lazy_builder' => ['securepages.form_builder:renderPlaceholderFormAction', [$form_id]],
+//      ];
       $form['#action'] = $placeholder;
     }
 

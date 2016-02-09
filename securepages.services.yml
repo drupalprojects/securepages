@@ -6,7 +6,7 @@ services:
       - { name: event_subscriber }
   securepages.form_builder:
     class: Drupal\securepages\FormBuilder
-    decorates: form_builder
+#    decorates: form_builder
     parent: form_builder
   securelogin.path_processor:
     class: Drupal\securepages\SecurepagesPathProcessor

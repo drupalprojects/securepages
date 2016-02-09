@@ -36,7 +36,10 @@ class SecurepagesSettingsForm  extends ConfigFormBase {
    */
   public function buildForm(array $form, FormStateInterface $form_state, Request $request = NULL) {
     $config = $this->config('securepages.settings');
-
+    $secure = 0;
+    if($config->get('secure')) {
+      $secure = 1;
+    }
     $form['enable'] = array(
       '#type' => 'checkbox',
       '#title' => t('Enable Secure Pages'),
@@ -66,13 +69,13 @@ class SecurepagesSettingsForm  extends ConfigFormBase {
     );
 
     $active_options = [
-      $this->t('Pages not matching the patterns should be secure'),
-      $this->t('Pages matching the patterns should be secure')
+      0 => $this->t('Pages not matching the patterns should be secure'),
+      1 => $this->t('Pages matching the patterns should be secure')
     ];
     $form['secure'] = array(
       '#type' => 'radios',
       '#title' => $this->t('Which pages will be secure'),
-      '#default_value' => $config->get('secure'),
+      '#default_value' => $secure,
       '#options' => $active_options,
     );
     $form['pages'] = array(
@@ -123,7 +126,6 @@ class SecurepagesSettingsForm  extends ConfigFormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
-    parent::submitForm($form, $form_state);
     $this->config('securepages.settings')
       ->set('enable', $form_state->getValue('enable'))
       ->set('switch', $form_state->getValue('switch'))
@@ -136,6 +138,8 @@ class SecurepagesSettingsForm  extends ConfigFormBase {
       ->set('forms', $this::explodeValues($form_state->getValue('forms')))
       ->set('debug', $form_state->getValue('debug'))
       ->save();
+
+    parent::submitForm($form, $form_state);
   }
 
   /**
