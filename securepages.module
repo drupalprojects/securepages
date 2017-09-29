@@ -1,6 +1,18 @@
 <?php
-
 /**
  * @file
- * Allows certain pages to be viewable only via HTTPS.
+ * Code for Secure Pages module.
  */
+
+use Drupal\Core\Routing\RouteMatchInterface;
+
+/**
+ * Implements hook_help().
+ */
+function securepages_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    case 'help.page.securepages':
+      $help_text = '<p>' . t('This module provides Set which pages are always going to be used in secure mode (SSL) Warning: Do not enable this module without configuring your web server to handle SSL with this installation of Drupal.') . '</p>';
+      return $help_text;
+  }
+}

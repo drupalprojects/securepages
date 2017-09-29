@@ -1,0 +1,18 @@
+enable: false
+switch: false
+basepath: ''
+basepath_ssl: ''
+secure: true
+pages:
+  - '/node/add*'
+  - '/node/*/edit'
+  - '/node/*/delete'
+  - '/user'
+  - '/user/*'
+  - '/admin'
+  - '/admin/*'
+ignore: {  }
+roles: {  }
+forms:
+  - user_login_form
+debug: false

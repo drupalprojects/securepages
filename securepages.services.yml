@@ -1,0 +1,15 @@
+services:
+  securepages.redirect:
+    class: Drupal\securepages\EventSubscriber\SecurepagesSubscriber
+    arguments: ['@config.factory']
+    tags:
+      - { name: event_subscriber }
+  securepages.form_builder:
+    class: Drupal\securepages\FormBuilder
+#    decorates: form_builder
+    parent: form_builder
+  securelogin.path_processor:
+    class: Drupal\securepages\SecurepagesPathProcessor
+    arguments: ['@config.factory']
+    tags:
+      - { name: path_processor_outbound }

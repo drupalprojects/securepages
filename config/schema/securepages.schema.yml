@@ -1,0 +1,48 @@
+# Schema for the configuration files of the securepages module.
+
+securepages.settings:
+  type: config_object
+  label: 'Secure Pages settings'
+  mapping:
+    enable:
+      type: boolean
+      label: 'Enable Secure Pages'
+    switch:
+      type: boolean
+      label: 'Switch back to HTTP pages when there are no matches'
+    basepath:
+      type: string
+      label: 'Non-secure base URL'
+    basepath_ssl:
+      type: string
+      label: 'Secure base URL'
+    secure:
+      type: boolean
+      label: 'Pages which will be be secure'
+    pages:
+      type: sequence
+      label: 'Pages'
+      sequence:
+        type: string
+        label: 'Path'
+    ignore:
+      type: sequence
+      label: 'Ignore pages'
+      sequence:
+        type: string
+        label: 'Path'
+    roles:
+      type: sequence
+      label: 'User roles'
+      sequence:
+        type: string
+        label: 'Always SSL'
+    forms:
+      type: sequence
+      label: 'Secure forms'
+      sequence:
+        type: string
+        label: 'Form ID'
+    debug:
+      type: boolean
+      label: 'Enable debugging'
